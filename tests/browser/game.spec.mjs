@@ -158,28 +158,24 @@ test("invalid save import is rejected without changing progress", async ({
   await page
     .getByRole("button", { name: "Exporter / importer", exact: false })
     .click();
-  await page
-    .locator("#import-file")
-    .setInputFiles({
-      name: "bad.json",
-      mimeType: "application/json",
-      buffer: Buffer.from('{"version":99}'),
-    });
+  await page.locator("#import-file").setInputFiles({
+    name: "bad.json",
+    mimeType: "application/json",
+    buffer: Buffer.from('{"version":99}'),
+  });
   await expect(page.locator("#toast")).toContainText("Import refusé");
   page.once("dialog", (d) => d.accept());
-  await page
-    .locator("#import-file")
-    .setInputFiles({
-      name: "good.json",
-      mimeType: "application/json",
-      buffer: Buffer.from(
-        JSON.stringify({
-          ...freshSave(),
-          body: [42, 0, 0],
-          earnedBody: [42, 0, 0],
-        }),
-      ),
-    });
+  await page.locator("#import-file").setInputFiles({
+    name: "good.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(
+      JSON.stringify({
+        ...freshSave(),
+        body: [42, 0, 0],
+        earnedBody: [42, 0, 0],
+      }),
+    ),
+  });
   await expect(page.locator("#toast")).toContainText("Sauvegarde importée");
   expect(
     await page.evaluate(
