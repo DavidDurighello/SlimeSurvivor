@@ -73,6 +73,7 @@ export function freshSave() {
     bodyPresets: [],
     gearPresets: [],
     muted: false,
+    reducedMotion: false,
     runs: 0,
     bestKills: 0,
   };
@@ -122,6 +123,7 @@ export function validateSave(input) {
     if (num(input[k])) s[k] = input[k];
   }
   s.muted = input.muted === true;
+  s.reducedMotion = input.reducedMotion === true;
   const nameValid = (p) =>
     typeof p?.name === "string" &&
     p.name.trim().length > 0 &&

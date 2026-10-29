@@ -1804,3 +1804,34 @@ dialog .button {
     font-weight: 800;
   }
 }
+
+#motion {
+  font-size: 8px;
+  font-weight: 800;
+}
+#motion[aria-pressed="true"] {
+  background: #e6ebd8;
+}
+#combo-hud {
+  position: absolute;
+  left: 20px;
+  top: 93px;
+  color: #ffe29a;
+  font-size: 15px;
+  font-weight: 950;
+  letter-spacing: 1px;
+  text-shadow: 0 2px 3px #152b32;
+}
+#special-hint {
+  position: absolute;
+  bottom: 120px;
+  right: 20px;
+  background: #29483dde;
+  border: 1px solid #f6cd83;
+  color: #ffe29a;
+  padding: 8px 10px;
+  border-radius: 5px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}

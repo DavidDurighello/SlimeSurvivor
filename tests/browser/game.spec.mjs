@@ -264,3 +264,23 @@ test("directional hero and slime artwork and independent arm poses are visible",
     Buffer.from(result.image.split(",")[1], "base64"),
   );
 });
+
+test("screen shake preference persists and OS reduced motion renders safely", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Désactiver les secousses" }).click();
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "Activer les secousses" }),
+  ).toHaveAttribute("aria-pressed", "true");
+  expect(
+    await page.evaluate(
+      () =>
+        JSON.parse(localStorage.getItem("whey-of-the-slime:v1")).reducedMotion,
+    ),
+  ).toBe(true);
+  await page.getByRole("button", { name: "C’EST PARTI" }).click();
+  await expect(page.locator("#hud")).toBeVisible();
+});
