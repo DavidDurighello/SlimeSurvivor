@@ -73,6 +73,7 @@ export function freshSave() {
     bodyPresets: [],
     gearPresets: [],
     muted: false,
+    reducedMotion: false,
     runs: 0,
     bestKills: 0,
   };
@@ -122,6 +123,7 @@ export function validateSave(input) {
     if (num(input[k])) s[k] = input[k];
   }
   s.muted = input.muted === true;
+  s.reducedMotion = input.reducedMotion === true;
   const nameValid = (p) =>
     typeof p?.name === "string" &&
     p.name.trim().length > 0 &&
@@ -164,4 +166,43 @@ export function replaceGear(save, preset) {
   );
   const wallet = save.gear.map((v, i) => v + refund[i] - cost[i]);
   return wallet.every((v) => v >= 0) ? wallet : null;
+}
+
+// A suggestion only: purchases still go through the normal preparation screen.
+export function nextUpgrade(save) {
+  const goals = [];
+  for (const [weapon, data] of Object.entries(WEAPONS)) {
+    const level = save.levels[weapon];
+    if (level < 5)
+      goals.push({
+        name: level
+          ? `${data.name} · niveau ${level + 1}`
+          : `Débloquer ${data.name}`,
+        tab: "gear",
+        color: 0,
+        cost: level ? weaponCost(level) : 15,
+        current: save.gear[0],
+        priority: level ? 2 : 0,
+      });
+  }
+  save.skills.forEach((level, color) => {
+    if (level < 5 && color < save.unlocked)
+      goals.push({
+        name: `${skillNames[color]} · rang ${level + 1}`,
+        tab: "body",
+        color,
+        cost: talentCost(level),
+        current: save.body[color],
+        priority: 1,
+      });
+  });
+  for (const goal of goals)
+    goal.missing = Math.max(0, goal.cost - goal.current);
+  goals.sort(
+    (a, b) =>
+      Number(b.missing === 0) - Number(a.missing === 0) ||
+      Math.min(1, b.current / b.cost) - Math.min(1, a.current / a.cost) ||
+      a.priority - b.priority,
+  );
+  return goals[0] ?? null;
 }

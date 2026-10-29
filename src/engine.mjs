@@ -58,6 +58,10 @@ export class Arena {
     this.specialCooldown = 0;
     this.boss = null;
     this.lastKill = -10;
+    this.combo = 0;
+    this.bestCombo = 0;
+    this.shake = 0;
+    this.stains = [];
   }
   fx(x, y, color, size = 25, kind = "burst") {
     this.effects.push({
@@ -132,6 +136,7 @@ export class Arena {
       "nova",
     );
     this.text(p.x, p.y - 55, "WHEY TOO STRONG!", "#ffcf72");
+    this.shake = 3;
     this.emit("special", key);
     return true;
   }
@@ -182,8 +187,13 @@ export class Arena {
       targetX: 0,
       targetY: 0,
       charge: 0,
+      pattern: "slam",
+      attackIndex: 0,
       facing: "down",
       moving: false,
+      recoilX: 0,
+      recoilY: 0,
+      impact: 0,
       dead: false,
     };
     this.enemies.push(e);
@@ -194,13 +204,31 @@ export class Arena {
     }
     return e;
   }
-  hit(e, damage, talents = [0, 0, 0]) {
+  hit(
+    e,
+    damage,
+    talents = [0, 0, 0],
+    weapon = "dumbbell",
+    origin = this.player,
+  ) {
     if (e.dead || this.ended) return;
     const resistance =
       e.type === 0 ? [0.65, 1, 1] : e.type === 1 ? [1, 0.65, 1] : [1, 1, 0.65];
     damage *= e.fragile > 0 ? 1.3 : 1;
     e.hp -= damage;
-    e.flash = 0.12;
+    e.flash = 0.09;
+    e.impact = 0.2;
+    const dx = e.x - origin.x,
+      dy = e.y - origin.y,
+      distance = Math.hypot(dx, dy) || 1;
+    const force =
+      (weapon === "dumbbell" ? 185 : weapon === "plate" ? 110 : 75) *
+      (e.boss ? 0.12 : 1);
+    e.recoilX = (dx / distance) * force;
+    e.recoilY = (dy / distance) * force;
+    e.impactAngle = Math.atan2(dy, dx);
+    this.shake = Math.max(this.shake, weapon === "dumbbell" ? 1.8 : 0.8);
+    this.emit("impact", { weapon });
     if (talents[0]) e.burn = Math.max(e.burn, talents[0] * resistance[0]);
     if (talents[1]) e.slow = Math.max(e.slow, talents[1] * resistance[1]);
     if (talents[2]) e.fragile = Math.max(e.fragile, talents[2] * resistance[2]);
@@ -217,7 +245,27 @@ export class Arena {
     if (e.dead) return;
     e.dead = true;
     this.kills++;
+    this.combo = this.time - this.lastKill <= 2.2 ? this.combo + 1 : 1;
+    this.bestCombo = Math.max(this.bestCombo, this.combo);
     this.lastKill = this.time;
+    if (this.combo === 5 || this.combo % 10 === 0) {
+      this.emit("streak", this.combo);
+      this.text(
+        this.player.x,
+        this.player.y - 55,
+        `${this.combo} À LA SUITE !`,
+        "#ffcf72",
+      );
+    }
+    this.stains.push({
+      x: e.x,
+      y: e.y,
+      r: e.r,
+      type: e.type,
+      life: 5,
+      seed: this.random() * 6,
+    });
+    if (this.stains.length > 30) this.stains.shift();
     this.rage = clamp(this.rage + 5 + this.save.skills[2] * 0.6, 0, 100);
     const color = Math.min(this.difficulty - 1, e.type);
     const body = e.boss ? 40 * this.difficulty : e.type === 2 ? 3 : 1;
@@ -239,12 +287,21 @@ export class Arena {
   finish(win) {
     if (this.ended) return;
     this.ended = true;
-    this.emit("end", { win, kills: this.kills, time: this.time });
+    this.emit("end", {
+      win,
+      kills: this.kills,
+      time: this.time,
+      bestCombo: this.bestCombo,
+    });
   }
   update(dt, input = { x: 0, y: 0 }) {
     if (this.paused || this.ended) return;
     dt = clamp(dt, 0, 0.05);
     this.time += dt;
+    this.shake = Math.max(0, this.shake - dt * 14);
+    if (this.time - this.lastKill > 2.2) this.combo = 0;
+    for (const stain of this.stains) stain.life -= dt;
+    this.stains = this.stains.filter((s) => s.life > 0);
     const p = this.player;
     const oldX = p.x,
       oldY = p.y;
@@ -323,7 +380,12 @@ export class Arena {
             Math.hypot(e.x - p.x, e.y - p.y) < 100 + e.r &&
             Math.cos(Math.atan2(e.y - p.y, e.x - p.x) - angle) > 0.1
           )
-            this.hit(e, damage, this.save.talents[hand]);
+            this.hit(
+              e,
+              damage,
+              this.save.talents[hand],
+              this.save.weapons[hand],
+            );
       } else {
         const angle = Math.atan2(target.y - p.y, target.x - p.x),
           shaker = this.save.weapons[hand] === "shaker";
@@ -354,11 +416,14 @@ export class Arena {
           Math.hypot(s.x - e.x, s.y - e.y) < e.r + 10
         ) {
           s.hit.add(e);
-          this.hit(e, s.damage, s.talents);
+          this.hit(e, s.damage, s.talents, s.shaker ? "shaker" : "plate", {
+            x: s.x - s.vx,
+            y: s.y - s.vy,
+          });
           if (s.shaker) {
             for (const other of [...this.enemies])
               if (other !== e && Math.hypot(other.x - e.x, other.y - e.y) < 65)
-                this.hit(other, s.damage * 0.6, s.talents);
+                this.hit(other, s.damage * 0.6, s.talents, "shaker", s);
             this.fx(s.x, s.y, "#b6ee77", 65, "ring");
             s.life = 0;
             break;
@@ -371,6 +436,11 @@ export class Arena {
         oldY = e.y;
       e.moving = false;
       e.flash = Math.max(0, e.flash - dt);
+      e.impact = Math.max(0, e.impact - dt);
+      e.x = clamp(e.x + e.recoilX * dt, e.r, WIDTH - e.r);
+      e.y = clamp(e.y + e.recoilY * dt, e.r, HEIGHT - e.r);
+      e.recoilX *= Math.exp(-dt * 18);
+      e.recoilY *= Math.exp(-dt * 18);
       for (const k of ["slow", "fragile", "burn"])
         e[k] = Math.max(0, e[k] - dt);
       if (e.burn > 0) {
@@ -383,19 +453,20 @@ export class Arena {
       e.attack -= dt;
       if (e.attack <= 0 && (e.boss || e.type === 2)) {
         e.attack = e.boss ? 4 : 7;
-        e.warning = 0.9;
+        if (e.boss) e.pattern = e.attackIndex++ % 2 === 0 ? "slam" : "charge";
+        e.warning = e.boss && e.pattern === "charge" ? 1.1 : 0.9;
         e.targetX = p.x;
         e.targetY = p.y;
       }
       if (e.warning > 0) {
         e.warning -= dt;
         if (e.warning <= 0) {
-          if (e.boss) {
+          if (e.boss && e.pattern !== "charge") {
             this.fx(e.x, e.y, "#ff897e", 145, "ring");
             if (Math.hypot(p.x - e.x, p.y - e.y) < 145) this.hurt(23);
           } else {
             const a = Math.atan2(e.targetY - e.y, e.targetX - e.x);
-            e.charge = 0.48;
+            e.charge = e.boss ? 0.6 : 0.48;
             e.cx = Math.cos(a);
             e.cy = Math.sin(a);
           }
@@ -412,8 +483,9 @@ export class Arena {
         dt;
       if (e.charge > 0) {
         e.charge -= dt;
-        e.x = clamp(e.x + e.cx * 250 * dt, e.r, WIDTH - e.r);
-        e.y = clamp(e.y + e.cy * 250 * dt, e.r, HEIGHT - e.r);
+        const chargeSpeed = e.boss ? 310 : 250;
+        e.x = clamp(e.x + e.cx * chargeSpeed * dt, e.r, WIDTH - e.r);
+        e.y = clamp(e.y + e.cy * chargeSpeed * dt, e.r, HEIGHT - e.r);
       } else {
         e.x += (dx / dist) * move;
         e.y += (dy / dist) * move;
@@ -436,6 +508,7 @@ export class Arena {
     p.hp = Math.max(0, p.hp - damage);
     p.inv = 0.75;
     this.fx(p.x, p.y, "#ff897e", 35, "ring");
+    this.shake = 3;
     this.emit("hurt");
     if (p.hp <= 0) this.finish(false);
   }

@@ -13,6 +13,7 @@ import {
   replaceTalents,
   replaceGear,
   weaponCost,
+  nextUpgrade,
 } from "./model.mjs";
 const $ = (s) => document.querySelector(s);
 const KEY = "whey-of-the-slime:v1";
@@ -76,9 +77,9 @@ const costText = (cost, i = 0) =>
   `<span class="jelly j${i}"><i></i>${cost}</span>`;
 const titles = ["Le vestiaire", "Le dojo des slimes", "La salle interdite"];
 $("#app").innerHTML = `
-<header class="topbar"><a class="brand" href="#" aria-label="Whey of the Slime, préparation"><span class="brand-icon">W<span>•</span></span><span>WHEY <em>of the</em> SLIME<small>NO PAIN. ALL GAIN.</small></span></a><div class="top-actions"><span class="prototype">PROTOTYPE · 01</span><button id="mute" class="icon-button" aria-label="Couper le son"></button><button id="help" class="icon-button" aria-label="Comment jouer">?</button><button id="mobile-storage" class="icon-button" aria-label="Exporter / importer la sauvegarde">S</button></div></header>
+<header class="topbar"><a class="brand" href="#" aria-label="Whey of the Slime, préparation"><span class="brand-icon">W<span>•</span></span><span>WHEY <em>of the</em> SLIME<small>NO PAIN. ALL GAIN.</small></span></a><div class="top-actions"><span class="prototype">PROTOTYPE · 01</span><button id="mute" class="icon-button" aria-label="Couper le son"></button><button id="motion" class="icon-button" aria-label="Désactiver les secousses">FX</button><button id="help" class="icon-button" aria-label="Comment jouer">?</button><button id="mobile-storage" class="icon-button" aria-label="Exporter / importer la sauvegarde">S</button></div></header>
 <main class="shell"><aside class="sidebar"><div class="eyebrow">LE PROGRAMME DU JOUR</div><nav aria-label="Préparation"><button data-tab="play"><span>01</span> Entrer dans l’arène <b><span class="arrow" aria-hidden="true"></span></b></button><button data-tab="body"><span>02</span> Le bonhomme <b><span class="arrow" aria-hidden="true"></span></b></button><button data-tab="gear"><span>03</span> L’arsenal <b><span class="arrow" aria-hidden="true"></span></b></button><button data-tab="codex"><span>04</span> Le codex <b><span class="arrow" aria-hidden="true"></span></b></button></nav><div class="wallet"><div class="eyebrow">VOTRE PETIT PACTOLE</div><h3>Gelées de personnage</h3><div id="body-wallet"></div><h3>Gelées d’armement</h3><div id="gear-wallet"></div><p>La fonte se mérite.<br>La gelée aussi.</p></div><div class="sidebar-bottom"><span class="local-dot"></span> Sauvegarde sur cet appareil<button id="storage">Exporter / importer <span class="arrow" aria-hidden="true"></span></button></div></aside>
-<section class="workspace"><div class="section-heading"><div><div class="eyebrow" id="section-kicker">SURVIVRE. SOULEVER. RECOMMENCER.</div><h1 id="section-title">C’est l’heure du <em>bulk.</em></h1></div><span class="chapter">EST. 2026<br>GYM & SLIME CLUB</span></div><div class="play-layout" id="play-layout"><section class="arena-column"><div class="arena-top"><span><i class="live-dot"></i> <span id="arena-label">ZONE D’ÉCHAUFFEMENT</span></span><span id="timer">${formatTime(SURVIVAL_SECONDS)}</span></div><div class="arena-wrap"><canvas id="arena" aria-label="Arène de jeu. Déplacement avec ZQSD, WASD ou les flèches ; Espace pour esquiver ; E pour le pouvoir spécial."></canvas><div id="hud" hidden><div class="hud-health"><span id="hp-label"></span><div class="meter hp"><i id="hp-fill"></i></div></div><button id="pause" aria-label="Mettre en pause">II</button><div class="rage-label"><span>RAGE</span><span id="rage-label">0 %</span></div><div class="meter rage"><i id="rage-fill"></i></div><div id="boss-hud" hidden><span>LE ROI DU BULK</span><div class="meter boss"><i id="boss-fill"></i></div></div><button id="mobile-stats">≡ Stats</button></div><div id="arena-overlay" class="arena-overlay"></div><div id="touch-controls" hidden><div id="joystick" aria-label="Joystick de déplacement"><span></span></div><div class="touch-actions"><button id="special">W<span>35 rage</span></button><button id="dash"><span class="arrow" aria-hidden="true"></span><span>DASH</span></button></div></div></div><div class="arena-bottom"><span>ARÈNE FERMÉE · ${SURVIVAL_SECONDS} S + BOSS</span><span>100 % MUSCLE / 0 % SÉRIEUX</span></div></section><aside id="run-panel" class="run-panel"></aside></div><section id="content" hidden></section></section></main>
+<section class="workspace"><div class="section-heading"><div><div class="eyebrow" id="section-kicker">SURVIVRE. SOULEVER. RECOMMENCER.</div><h1 id="section-title">C’est l’heure du <em>bulk.</em></h1></div><span class="chapter">EST. 2026<br>GYM & SLIME CLUB</span></div><div class="play-layout" id="play-layout"><section class="arena-column"><div class="arena-top"><span><i class="live-dot"></i> <span id="arena-label">ZONE D’ÉCHAUFFEMENT</span></span><span id="timer">${formatTime(SURVIVAL_SECONDS)}</span></div><div class="arena-wrap"><canvas id="arena" aria-label="Arène de jeu. Déplacement avec ZQSD, WASD ou les flèches ; Espace pour esquiver ; E pour le pouvoir spécial."></canvas><div id="hud" hidden><div class="hud-health"><span id="hp-label"></span><div class="meter hp"><i id="hp-fill"></i></div></div><button id="pause" aria-label="Mettre en pause">II</button><div class="rage-label"><span>RAGE</span><span id="rage-label">0 %</span></div><div class="meter rage"><i id="rage-fill"></i></div><div id="combo-hud" hidden></div><div id="special-hint" hidden>POUVOIR PRÊT</div><div id="boss-hud" hidden><span>LE ROI DU BULK</span><div class="meter boss"><i id="boss-fill"></i></div></div><button id="mobile-stats">≡ Stats</button></div><div id="arena-overlay" class="arena-overlay"></div><div id="touch-controls" hidden><div id="joystick" aria-label="Joystick de déplacement"><span></span></div><div class="touch-actions"><button id="special">W<span>35 rage</span></button><button id="dash"><span class="arrow" aria-hidden="true"></span><span>DASH</span></button></div></div></div><div class="arena-bottom"><span>ARÈNE FERMÉE · ${SURVIVAL_SECONDS} S + BOSS</span><span>100 % MUSCLE / 0 % SÉRIEUX</span></div></section><aside id="run-panel" class="run-panel"></aside></div><section id="content" hidden></section></section></main>
 <footer><span>WHEY OF THE SLIME</span><span>Du muscle. De la gelée. Aucun jour de repos.</span><span>SANS COMPTE · SANS SERVEUR</span></footer><div id="toast" role="status" aria-live="polite"></div><dialog id="dialog"></dialog><input type="file" id="import-file" accept="application/json,.json" hidden>`;
 const renderer = new Renderer($("#arena"));
 function toast(message, important = false) {
@@ -91,6 +92,12 @@ function toast(message, important = false) {
 function updateWallet() {
   $("#body-wallet").innerHTML = jelly(save.body);
   $("#gear-wallet").innerHTML = jelly(save.gear);
+  $("#motion").setAttribute("aria-pressed", String(save.reducedMotion));
+  $("#motion").setAttribute(
+    "aria-label",
+    save.reducedMotion ? "Activer les secousses" : "Désactiver les secousses",
+  );
+  $("#motion").textContent = save.reducedMotion ? "FIXE" : "FX";
   $("#mute").textContent = save.muted ? "OFF" : "ON";
   $("#mute").setAttribute(
     "aria-label",
@@ -131,7 +138,21 @@ function renderOverlay() {
   }
   if (game.ended) {
     el.className = "arena-overlay paused";
-    el.innerHTML = `<div class="overlay-card"><span class="eyebrow">${endResult?.win ? "BOSS ÉCLATÉ. EGO GONFLÉ." : "LA FONTE ATTENDRA."}</span><h2>${endResult?.win ? "Bien joué, gros bras." : "Même les muscles fondent."}</h2><p>${endResult?.win ? (difficulty < 3 ? "La difficulté suivante est débloquée." : "Tu as conquis les trois salles !") : "Chaque run te rend plus fort. Tes gelées sont en sécurité."}</p><div class="result-numbers"><strong>${game.kills}<small>SLIMES</small></strong><strong>${formatTime(game.time)}<small>SURVIE</small></strong></div><h3>Personnage</h3><div>${jelly(game.gainedBody)}</div><h3>Armement</h3><div>${jelly(game.gainedGear)}</div><button id="return" class="button primary full">AU VESTIAIRE <span class="arrow" aria-hidden="true"></span></button></div>`;
+    const goal = nextUpgrade(save);
+    el.innerHTML = `<div class="overlay-card result-card"><span class="eyebrow">${endResult?.win ? "BOSS ÉCLATÉ. EGO GONFLÉ." : "LA FONTE ATTENDRA."}</span><h2>${endResult?.win ? "Bien joué, gros bras." : "Même les muscles fondent."}</h2><p>${endResult?.win ? (difficulty < 3 ? "La difficulté suivante est accessible." : "Tu as conquis les trois salles !") : "Chaque run te rend plus fort. Tes gelées sont en sécurité."}</p><div class="result-numbers"><strong>${game.kills}<small>SLIMES</small></strong><strong>${formatTime(game.time)}<small>SURVIE</small></strong></div><div class="run-record">${endResult?.record ? "NOUVEAU RECORD · " : ""}Meilleure série : ${game.bestCombo}</div><h3>Personnage</h3><div>${jelly(game.gainedBody)}</div><h3>Armement</h3><div>${jelly(game.gainedGear)}</div>${goal ? `<button id="upgrade-goal" class="upgrade-goal"><small>${goal.missing ? "PROCHAIN OBJECTIF" : "AMÉLIORATION ACCESSIBLE"}</small><b>${goal.name}</b><span>${Math.min(goal.current, goal.cost)} / ${goal.cost} gelées ${colors[goal.color]} · ${goal.missing ? `Encore ${goal.missing}` : "Prêt à acheter"}</span><i style="width:${Math.min(100, (goal.current / goal.cost) * 100)}%"></i></button>` : "<p>Ton programme est au maximum. Essaie un autre duo !</p>"}<button id="replay" class="button primary full">ENCORE UN RUN</button>${endResult?.win && difficulty < 3 ? '<button id="next-run" class="button secondary full">TENTER LE PALIER SUIVANT</button>' : ""}<button id="return" class="button secondary full">AU VESTIAIRE <span class="arrow" aria-hidden="true"></span></button></div>`;
+    $("#replay").onclick = start;
+    if ($("#next-run"))
+      $("#next-run").onclick = () => {
+        difficulty++;
+        start();
+      };
+    if ($("#upgrade-goal"))
+      $("#upgrade-goal").onclick = () => {
+        game = null;
+        overlay = null;
+        finishToLobby();
+        setTab(goal.tab);
+      };
     $("#return").onclick = () => {
       game = null;
       overlay = null;
@@ -179,6 +200,7 @@ function start() {
   resetStick();
   overlay = null;
   endResult = null;
+  $("#timer").textContent = formatTime(SURVIVAL_SECONDS);
   game = new Arena(save, difficulty, (type, data) => {
     if (type === "loot") {
       save.body[data.color] += data.body;
@@ -201,11 +223,14 @@ function start() {
       type === "dash" ||
       type === "attack"
     )
-      sound.play(type);
+      sound.play(type, data);
+    if (type === "impact") sound.play("impact", data.weapon);
+    if (type === "streak") sound.play("streak");
     if (type === "boss")
-      toast("LE ROI DU BULK arrive. Évite son cercle rouge !", true);
+      toast("LE ROI DU BULK ! Cercle : onde de choc. Couloir : charge.", true);
     if (type === "end") {
-      endResult = data;
+      endResult = { ...data, record: data.kills > save.bestKills };
+      sound.play(data.win ? "win" : "lose");
       save.runs++;
       save.bestKills = Math.max(save.bestKills, data.kills);
       if (data.win)
@@ -214,6 +239,13 @@ function start() {
       keys.clear();
       resetStick();
       renderOverlay();
+      const label = $("#run-panel > .eyebrow");
+      if (label) label.textContent = "SESSION TERMINÉE";
+      const button = $("#panel-pause");
+      if (button) {
+        button.disabled = true;
+        button.textContent = "Gains sauvegardés";
+      }
     }
   });
   setTab("play");
@@ -450,7 +482,7 @@ function renderCodex() {
       })
       .join(
         "",
-      )}</div><div class="card bestiary"><h2>Connais ta gelée.</h2><div><p><b class="green">● Vert · Classique</b> Poursuit le joueur. Résiste partiellement à la brûlure.</p><p><b class="blue">◆ Bleu · Sprinteur</b> Petit et rapide. Résiste partiellement au ralentissement.</p><p><b class="purple">▲ Violet · Chargeur</b> Massif. Annonce une charge. Résiste partiellement à la fragilité.</p></div><p>La couleur indique le type ; la taille, la puissance. Le boss géant reprend la couleur du palier et déclenche une onde de choc annoncée au sol.</p></div>`;
+      )}</div><div class="card bestiary"><h2>Connais ta gelée.</h2><div><p><b class="green">● Vert · Classique</b> Poursuit le joueur. Résiste partiellement à la brûlure.</p><p><b class="blue">◆ Bleu · Sprinteur</b> Petit et rapide. Résiste partiellement au ralentissement.</p><p><b class="purple">▲ Violet · Chargeur</b> Massif. Annonce une charge. Résiste partiellement à la fragilité.</p></div><p>La couleur indique le type ; la taille, la puissance. Le boss géant reprend la couleur du palier et alterne onde de choc et charge, annoncées au sol.</p></div>`;
 }
 function showDialog(content) {
   const d = $("#dialog");
@@ -504,6 +536,11 @@ $("#help").onclick = () => {
   showDialog(
     `<span class="eyebrow">LE BRIEF DU COACH</span><h2>Un programme simple.</h2><p>Survis ${SURVIVAL_SECONDS} secondes, puis bats le boss. Les slimes continuent d’arriver pendant le boss. Garde tes gelées même si tu perds ou quittes le combat.</p><ul><li>Déplacement : ZQSD, WASD, flèches ou joystick tactile.</li><li>Dash : Espace ou bouton <span class="arrow" aria-hidden="true"></span>. Invulnérable brièvement.</li><li>Pouvoir combiné : E ou W tactile, coûte 35 rage.</li><li>Pause : Échap, P ou bouton II.</li><li>Les attaques visent automatiquement.</li></ul><p>Les gelées d’armement sont un drop supplémentaire à 30 %. Les couleurs azur et violette se débloquent aux paliers 2 et 3. Dépense tes gelées entre les runs.</p><p>Les talents de brûlure, ralentissement et fragilité amplifient aussi ton pouvoir combiné.</p>`,
   );
+};
+$("#motion").onclick = () => {
+  save.reducedMotion = !save.reducedMotion;
+  persist();
+  updateWallet();
 };
 $("#mute").onclick = () => {
   sound.unlock();
@@ -628,6 +665,9 @@ function loop(timestamp) {
     $("#hp-label").textContent = `${Math.ceil(p.hp)} / ${p.maxHp} PV`;
     $("#hp-fill").style.width = `${(p.hp / p.maxHp) * 100}%`;
     $("#rage-fill").style.width = `${game.rage}%`;
+    $("#combo-hud").hidden = game.combo < 3;
+    $("#combo-hud").textContent = `${game.combo} À LA SUITE`;
+    $("#special-hint").hidden = game.rage < 35 || game.ended;
     $("#rage-label").textContent = `${Math.floor(game.rage)} %`;
     $("#dash").classList.toggle("cooldown", p.dash > 0);
     $("#dash span").textContent =

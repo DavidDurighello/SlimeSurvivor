@@ -23,7 +23,7 @@ npm run preview
 ```
 
 Le dossier `dist/` est un site statique prêt à héberger. Le workflow GitHub Pages
-peut le publier automatiquement depuis la branche du prototype (voir ci-dessous). Les illustrations Canvas et bruitages synthétiques sont
+le publie uniquement après fusion dans `main` (voir ci-dessous). Les illustrations Canvas et bruitages synthétiques sont
 produits localement, sans ressources externes ni télémétrie.
 
 ## Jouer
@@ -37,12 +37,19 @@ produits localement, sans ressources externes ni télémétrie.
 Le personnage et les slimes disposent de vues de face, de dos et de profil.
 L’orientation suit le déplacement et reste conservée à l’arrêt. Chaque bras
 anime indépendamment son arme vers la cible automatique ; la pause fige aussi
-les animations.
+les animations. Les coups repoussent et déforment les slimes ; les éliminations
+enchaînées sont signalées et les impacts sonnent différemment selon l’arme.
+Le bouton **FX / FIXE** désactive les secousses ; la préférence système de réduction
+des animations est aussi respectée pour les secousses.
 
 Les attaques sont automatiques. Survivre 30 secondes fait apparaître le boss ;
-les slimes continuent d’arriver. Battre le boss débloque le palier suivant.
+les slimes continuent d’arriver. Le boss alterne une onde de choc (cercle) et une
+charge (couloir), annoncées au sol. Battre le boss débloque le palier suivant.
 Quitter ou perdre conserve toutes les gelées déjà gagnées. Fermer l’onglet ne
-conserve pas le combat, mais la progression est sauvegardée à chaque gain.
+conserve pas le combat, mais la progression est sauvegardée à chaque gain. Le
+bilan présente la meilleure série, un éventuel record et une suggestion d’achat
+avec la quantité manquante. Relancer un run ou tenter le palier suivant après une
+victoire ne dépense aucune gelée ; les achats restent manuels au vestiaire.
 
 Commencer avec deux haltères. Acheter des disques ou shakers dans l’arsenal avec
 la gelée d’armement, qui tombe en supplément à 30 %. Les couleurs azur et violette
@@ -89,8 +96,8 @@ Phaser ni de ressources graphiques distantes.
 L’équilibrage est une première proposition. Les arbres utilisent pour le moment
 une progression linéaire par branche et par effet ; les ramifications, malus de
 vulnérabilité du joueur, effets supplémentaires du dash et patterns de boss
-spécifiques à chaque palier restent à enrichir. Les boss partagent un comportement
-d’onde de choc, avec type, taille et puissance visibles. Pas de musique dans cette
+spécifiques à chaque palier restent à enrichir. Les boss partagent une alternance
+d’onde de choc et de charge, avec type, taille et puissance visibles. Pas de musique dans cette
 version. Tests réalisés sur Chromium, sans validation sur un téléphone physique
 ni Safari/iOS pour le moment.
 

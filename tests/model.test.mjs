@@ -6,6 +6,7 @@ import {
   replaceTalents,
   replaceGear,
   comboKey,
+  nextUpgrade,
 } from "../src/model.mjs";
 import { Arena } from "../src/engine.mjs";
 test("save validation rejects malformed imports and keeps independent hands", () => {
@@ -218,4 +219,105 @@ test("attacks animate the correct hand, aim at target and freeze in pause", () =
   a.paused = false;
   for (let i = 0; i < 7; i++) a.update(0.05);
   assert.equal(a.player.attacks[0].life, 0);
+});
+
+test("impacts recoil away from the attacker, stay bounded and resist on bosses", () => {
+  const a = new Arena(freshSave(), 1);
+  a.spawn = 100;
+  a.cooldowns = [100, 100];
+  const e = a.spawnEnemy();
+  e.x = a.player.x + 50;
+  e.y = a.player.y;
+  e.hp = 1000;
+  a.hit(e, 1);
+  assert.ok(e.recoilX > 0);
+  assert.equal(e.impact, 0.2);
+  const old = e.x;
+  a.update(0.01);
+  assert.ok(e.x > old);
+  assert.ok(e.impact < 0.2);
+  const boss = a.spawnEnemy(true);
+  boss.x = a.player.x + 50;
+  boss.y = a.player.y;
+  a.hit(boss, 1);
+  assert.ok(boss.recoilX < e.recoilX);
+  e.x = 439;
+  a.update(0.05);
+  assert.ok(e.x <= 440 - e.r);
+});
+test("kill chains expire and never grant duplicate loot", () => {
+  const a = new Arena(
+    freshSave(),
+    1,
+    () => {},
+    () => 0.8,
+  );
+  for (let i = 0; i < 5; i++) {
+    a.kill(a.spawnEnemy());
+    a.time += 0.2;
+  }
+  assert.equal(a.combo, 5);
+  assert.equal(a.bestCombo, 5);
+  const body = [...a.gainedBody];
+  a.kill(a.enemies[0]);
+  assert.deepEqual(a.gainedBody, body);
+  a.time += 3;
+  a.update(0.01);
+  assert.equal(a.combo, 0);
+  a.kill(a.spawnEnemy());
+  assert.equal(a.combo, 1);
+  assert.equal(a.bestCombo, 5);
+});
+test("older saves default to full effects and keep the reduced motion preference", () => {
+  const legacy = freshSave();
+  delete legacy.reducedMotion;
+  assert.equal(validateSave(legacy).reducedMotion, false);
+  legacy.reducedMotion = true;
+  assert.equal(validateSave(legacy).reducedMotion, true);
+});
+
+test("next upgrade suggests an exact affordable purchase without touching jelly", () => {
+  const s = freshSave();
+  s.gear[0] = 15;
+  const before = JSON.stringify(s);
+  const goal = nextUpgrade(s);
+  assert.equal(goal.name, "Débloquer Disques");
+  assert.equal(goal.missing, 0);
+  assert.equal(goal.tab, "gear");
+  assert.equal(JSON.stringify(s), before);
+  s.gear[0] = 0;
+  s.body[0] = 5;
+  const body = nextUpgrade(s);
+  assert.equal(body.name, "Muscles · rang 1");
+  assert.equal(body.missing, 3);
+  s.skills = [5, 5, 5];
+  s.levels = { dumbbell: 5, plate: 5, shaker: 5 };
+  assert.equal(nextUpgrade(s), null);
+});
+
+test("boss alternates a warned slam and a charge toward a locked target", () => {
+  const a = new Arena(freshSave(), 1);
+  a.spawn = 100;
+  a.cooldowns = [100, 100];
+  a.player.x = 300;
+  a.player.y = 100;
+  const boss = a.spawnEnemy(true);
+  boss.x = 100;
+  boss.y = 100;
+  boss.attack = 0;
+  a.update(0.05);
+  assert.equal(boss.pattern, "slam");
+  assert.ok(boss.warning > 0);
+  assert.equal(boss.charge, 0);
+  for (let i = 0; i < 20; i++) a.update(0.05);
+  boss.attack = 0;
+  a.update(0.05);
+  assert.equal(boss.pattern, "charge");
+  const targetY = boss.targetY;
+  a.player.y = 400;
+  for (let i = 0; i < 23; i++) a.update(0.05);
+  assert.equal(boss.targetY, targetY);
+  assert.ok(boss.charge > 0);
+  assert.ok(Math.abs(boss.cy) < 0.01);
+  assert.ok(boss.x > 100);
 });

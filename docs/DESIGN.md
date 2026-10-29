@@ -59,3 +59,18 @@ lancés et shakers magiques. Voir README pour les capacités réellement implém
 et les simplifications. Les chiffres du prototype sont des valeurs à tester, pas
 un équilibrage validé. La musique, les arbres ramifiés et les boss distincts feront
 l’objet d’itérations après essais du combat.
+
+## Retour de combat et relance
+
+Les impacts déforment les slimes dans l’axe du coup et leur donnent un recul
+amorti, réduit sur les boss. Éclaboussures temporaires limitées en nombre et
+bruitages distincts par arme. Les secousses légères se désactivent avec FX / FIXE
+et respectent la préférence système de réduction des animations.
+
+Les éliminations à moins de 2,2 secondes d’écart forment une série, avec annonces
+aux paliers. C’est un retour visuel et sonore, sans bonus de gelée caché.
+Les boss alternent onde de choc circulaire et charge sur une direction annoncée
+et verrouillée avant le départ. Le bilan conserve les gains, montre la meilleure
+série, un éventuel record et le prochain achat suggéré avec son coût réel. Le
+joueur choisit entre relancer, augmenter la difficulté après victoire ou revenir
+aux améliorations ; aucune dépense automatique ni récompense de relance.

@@ -264,3 +264,60 @@ test("directional hero and slime artwork and independent arm poses are visible",
     Buffer.from(result.image.split(",")[1], "base64"),
   );
 });
+
+test("screen shake preference persists and OS reduced motion renders safely", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Désactiver les secousses" }).click();
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "Activer les secousses" }),
+  ).toHaveAttribute("aria-pressed", "true");
+  expect(
+    await page.evaluate(
+      () =>
+        JSON.parse(localStorage.getItem("whey-of-the-slime:v1")).reducedMotion,
+    ),
+  ).toBe(true);
+  await page.getByRole("button", { name: "C’EST PARTI" }).click();
+  await expect(page.locator("#hud")).toBeVisible();
+});
+
+test("defeat shows a reachable goal and replay restarts without losing jelly", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.clock.install({ time: new Date("2026-01-01T00:00:00Z") });
+  await page.clock.pauseAt(new Date("2026-01-01T00:00:01Z"));
+  // Fixed spawning keeps this unattended combat reproducible; no health or damage bypass.
+  await page.addInitScript(() => {
+    let seed = 7;
+    Math.random = () => {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      return seed / 4294967296;
+    };
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "C’EST PARTI" }).click();
+  for (let i = 0; i < 24; i++) {
+    await page.clock.runFor(5000);
+    if (await page.locator("#replay").isVisible()) break;
+  }
+  await expect(page.locator("#replay")).toBeVisible();
+  await expect(page.locator("#upgrade-goal")).toBeVisible();
+  await expect(page.locator(".run-record")).toContainText("Meilleure série");
+  const earned = await page.evaluate(
+    () => JSON.parse(localStorage.getItem("whey-of-the-slime:v1")).earnedBody,
+  );
+  await page.screenshot({ path: "/tmp/whey-run-result.png", fullPage: true });
+  await page.locator("#replay").click();
+  await expect(page.locator("#timer")).toHaveText("00:30");
+  await expect(page.locator("#replay")).toHaveCount(0);
+  expect(
+    await page.evaluate(
+      () => JSON.parse(localStorage.getItem("whey-of-the-slime:v1")).earnedBody,
+    ),
+  ).toEqual(earned);
+});

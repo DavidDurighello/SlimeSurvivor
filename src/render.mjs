@@ -54,10 +54,17 @@ export class Renderer {
     const profile = facing === "left" || facing === "right";
     const sign = facing === "left" ? -1 : 1;
     const squash = e.warning > 0 ? 0.8 : 1 + bounce * 0.08;
+    const impact = Math.sin(((e.impact || 0) / 0.2) * Math.PI) * 0.28;
     this.ellipse(e.x, e.y + e.r * 0.7, e.r * 1.06, e.r * 0.3, "#0b111742");
     c.save();
     c.translate(e.x, e.y - (e.moving ? Math.abs(bounce) * e.r * 0.13 : 0));
     if (e.moving && profile) c.transform(1, 0, sign * 0.12, 1, 0, 0);
+    if (impact > 0) {
+      const angle = e.impactAngle || 0;
+      c.rotate(angle);
+      c.scale(1 - impact, 1 + impact);
+      c.rotate(-angle);
+    }
     c.scale(1 / squash, squash);
     c.beginPath();
     c.moveTo(-e.r, e.r * 0.5);
@@ -329,6 +336,15 @@ export class Renderer {
     if (game) t = game.time;
     const c = this.ctx;
     c.clearRect(0, 0, W, H);
+    c.save();
+    const reduced =
+      game?.save.reducedMotion ||
+      globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (game && !reduced && game.shake > 0 && !game.paused && !game.ended)
+      c.translate(
+        Math.sin(t * 95) * game.shake,
+        Math.cos(t * 121) * game.shake * 0.6,
+      );
     c.fillStyle = "#d4d8bb";
     c.fillRect(0, 0, W, H);
     // Rubber gym tiles, painted court and worn floor markings.
@@ -392,6 +408,7 @@ export class Renderer {
           },
           t,
         );
+      c.restore();
       return;
     }
     for (const e of game.enemies) {
@@ -400,19 +417,42 @@ export class Renderer {
         c.fillStyle = "#ef75553a";
         c.lineWidth = 3;
         c.setLineDash([7, 5]);
-        if (e.boss) {
+        if (e.boss && e.pattern !== "charge") {
           c.beginPath();
           c.arc(e.x, e.y, 145, 0, Math.PI * 2);
           c.fill();
           c.stroke();
         } else {
-          this.line(e.x, e.y, e.targetX, e.targetY, "#df665d85", 24);
+          const angle = Math.atan2(e.targetY - e.y, e.targetX - e.x);
+          const length = e.boss ? 186 : 120;
+          this.line(
+            e.x,
+            e.y,
+            e.x + Math.cos(angle) * length,
+            e.y + Math.sin(angle) * length,
+            "#df665d85",
+            (e.r + 16) * 2,
+          );
           c.strokeStyle = "#de5e4b";
           c.strokeRect(e.targetX - 15, e.targetY - 15, 30, 30);
         }
         c.setLineDash([]);
       }
     }
+    for (const stain of game.stains || []) {
+      c.globalAlpha = Math.min(0.2, stain.life * 0.12);
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * Math.PI * 2 + stain.seed;
+        this.ellipse(
+          stain.x + Math.cos(a) * stain.r * 0.65,
+          stain.y + Math.sin(a) * stain.r * 0.35,
+          stain.r * 0.55,
+          stain.r * 0.2,
+          colors[stain.type],
+        );
+      }
+    }
+    c.globalAlpha = 1;
     for (const d of game.drops) {
       c.globalAlpha = d.life / 0.6;
       this.ellipse(d.x, d.y, 7, 5, colors[d.color]);
@@ -510,5 +550,6 @@ export class Renderer {
       c.fillText(f.text, f.x, f.y - (0.85 - f.life) * 35);
     }
     c.globalAlpha = 1;
+    c.restore();
   }
 }
