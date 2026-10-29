@@ -46,15 +46,17 @@ test("combination ignores hand order, consumes rage, pauses correctly", () => {
   assert.equal(a.time, 0);
   assert.equal(a.dash(), false);
 });
-test("boss appears at five minutes, enemies continue and victory ends run", () => {
+test("boss appears at 30 seconds, enemies continue and victory ends run", () => {
   const a = new Arena(
     freshSave(),
     1,
     () => {},
     () => 0.2,
   );
-  a.time = 299.99;
+  a.time = 29.95;
   a.update(0.02);
+  assert.equal(a.boss, null, "No boss before 30 seconds");
+  a.update(0.04);
   assert.ok(a.boss);
   assert.equal(a.ended, false);
   const count = a.enemies.length;
@@ -123,8 +125,8 @@ test("complete runs can defeat every boss with earned maximum upgrades", () => {
       true,
       `Difficulty ${difficulty} must be winnable`,
     );
-    assert.ok(a.time >= 300);
-    assert.ok(a.kills > 300);
+    assert.ok(a.time >= 30);
+    assert.ok(a.kills > 20);
   }
 });
 
