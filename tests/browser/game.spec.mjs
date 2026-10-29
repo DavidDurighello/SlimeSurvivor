@@ -113,7 +113,8 @@ test("portrait layout, touch controls and pause", async ({ browser }) => {
 test("real combat earns persistent loot and reveals a combination on first use", async ({
   page,
 }) => {
-  await page.clock.install();
+  await page.clock.install({ time: new Date("2026-01-01T00:00:00Z") });
+  await page.clock.pauseAt(new Date("2026-01-01T00:00:01Z"));
   const seed = freshSave();
   seed.skills = [5, 5, 5];
   seed.levels = { dumbbell: 5, plate: 5, shaker: 5 };
@@ -130,7 +131,12 @@ test("real combat earns persistent loot and reveals a combination on first use",
   }, seed);
   await page.goto("/");
   await page.getByRole("button", { name: "C’EST PARTI" }).click();
-  await page.clock.runFor(35000);
+  await expect(page.locator("#timer")).toHaveText("00:30");
+  await page.clock.runFor(29000);
+  await expect(page.locator("#boss-hud")).toBeHidden();
+  await page.clock.runFor(1200);
+  await expect(page.locator("#boss-hud")).toBeVisible();
+  await expect(page.locator("#timer")).toHaveText("BOSS");
   await expect(page.locator("#kills-stat")).not.toHaveText("0");
   const before = await page.evaluate(() =>
     JSON.parse(localStorage.getItem("whey-of-the-slime:v1")),

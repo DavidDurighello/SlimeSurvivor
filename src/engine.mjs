@@ -1,4 +1,5 @@
 import { WEAPONS, comboKey } from "./model.mjs";
+export const SURVIVAL_SECONDS = 30;
 export const WIDTH = 440,
   HEIGHT = 660;
 const clamp = (v, a, b) => Math.max(a, Math.min(v, b));
@@ -241,7 +242,7 @@ export class Arena {
       0,
       this.rage - dt * (this.time - this.lastKill > 1.6 ? 10 : 1.1),
     );
-    if (this.time >= 300 && !this.boss) this.spawnEnemy(true);
+    if (this.time >= SURVIVAL_SECONDS && !this.boss) this.spawnEnemy(true);
     this.spawn -= dt;
     if (this.spawn <= 0 && this.enemies.length < 125) {
       this.spawnEnemy();

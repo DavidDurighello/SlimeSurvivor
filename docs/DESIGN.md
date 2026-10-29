@@ -8,7 +8,7 @@ muet. Le spectacle doit rester compatible avec la lecture des attaques ennemies.
 
 ## Boucle validée
 
-Préparation → cinq minutes de survie en arène verticale fermée → boss avec
+Préparation → 30 secondes de survie en arène verticale fermée → boss avec
 hordes toujours présentes → victoire ou mort → préparation. Quitter est permis
 à tout moment depuis la pause. Tous les gains sont conservés. Battre le boss
 ouvre le niveau suivant, les anciens niveaux restent accessibles au farming.

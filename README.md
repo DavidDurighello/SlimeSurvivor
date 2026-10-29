@@ -34,7 +34,7 @@ produits localement, sans ressources externes ni télémétrie.
 - Pause : Échap, P ou bouton II. Les statistiques mobiles et le passage en
   arrière-plan mettent aussi le combat en pause.
 
-Les attaques sont automatiques. Survivre cinq minutes fait apparaître le boss ;
+Les attaques sont automatiques. Survivre 30 secondes fait apparaître le boss ;
 les slimes continuent d’arriver. Battre le boss débloque le palier suivant.
 Quitter ou perdre conserve toutes les gelées déjà gagnées. Fermer l’onglet ne
 conserve pas le combat, mais la progression est sauvegardée à chaque gain.
@@ -71,7 +71,7 @@ python3 scripts/check_secrets.py --all
 Les tests navigateur utilisent Chromium système à `/usr/bin/chromium` dans cet
 environnement. Ailleurs, fournir `CHROMIUM_PATH=/chemin/vers/chromium`.
 Ils lancent leur serveur Vite, sans connexion à un service externe. Les tests
-moteur couvrent également le boss à cinq minutes, la fin de partie, les drops et
+moteur couvrent également le boss à 30 secondes, la fin de partie, les drops et
 les remboursements sans duplication de gelées.
 
 ## État du prototype
