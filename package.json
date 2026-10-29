@@ -9,8 +9,9 @@
     "preview": "vite preview --host 0.0.0.0",
     "test": "node tests/model.test.mjs",
     "test:browser": "playwright test",
-    "format": "prettier --write src tests index.html playwright.config.mjs package.json README.md docs",
-    "format:check": "prettier --check src tests index.html playwright.config.mjs package.json README.md docs"
+    "format": "prettier --write src tests index.html playwright.config.mjs vite.config.mjs package.json README.md docs scripts/test-pages.mjs",
+    "format:check": "prettier --check src tests index.html playwright.config.mjs vite.config.mjs package.json README.md docs scripts/test-pages.mjs",
+    "test:pages": "npm run build && node scripts/test-pages.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",

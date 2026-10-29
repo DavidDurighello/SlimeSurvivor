@@ -20,3 +20,6 @@ jobs:
       - run: npm run test:browser
         env:
           CHROMIUM_PATH: /usr/bin/google-chrome
+      - run: npm run test:pages
+        env:
+          CHROMIUM_PATH: /usr/bin/google-chrome

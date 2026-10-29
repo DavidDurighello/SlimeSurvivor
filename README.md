@@ -22,8 +22,8 @@ npm run build
 npm run preview
 ```
 
-Le dossier `dist/` est un site statique prêt à héberger. Aucun déploiement n’est
-réalisé automatiquement. Les illustrations Canvas et bruitages synthétiques sont
+Le dossier `dist/` est un site statique prêt à héberger. Le workflow GitHub Pages
+peut le publier automatiquement depuis la branche du prototype (voir ci-dessous). Les illustrations Canvas et bruitages synthétiques sont
 produits localement, sans ressources externes ni télémétrie.
 
 ## Jouer
@@ -63,6 +63,7 @@ Les parties simultanées dans plusieurs onglets ne sont pas prises en charge.
 npm test
 npm run build
 npm run test:browser
+npm run test:pages
 npm run format:check
 python3 scripts/check_secrets.py --all
 ```
@@ -87,3 +88,38 @@ spécifiques à chaque palier restent à enrichir. Les boss partagent un comport
 d’onde de choc, avec type, taille et puissance visibles. Pas de musique dans cette
 version. Tests réalisés sur Chromium, sans validation sur un téléphone physique
 ni Safari/iOS pour le moment.
+
+## GitHub Pages
+
+Le workflow `.github/workflows/pages.yml` construit et publie uniquement `dist/`
+à chaque push sur `feat/first-playable`. Aucun secret personnel à ajouter : il
+utilise le jeton temporaire fourni par GitHub Actions avec des permissions limitées.
+Les dépendances de build et les sources du dépôt ne sont pas incluses dans `dist/`.
+Le site publié est accessible publiquement, même si le dépôt est privé selon le
+plan GitHub ; aucune sauvegarde utilisateur n’est envoyée au site.
+
+Activation initiale par le propriétaire du dépôt :
+
+1. Dans **Settings → Pages → Build and deployment**, choisir **Source: GitHub Actions**.
+2. Dans **Actions → Deploy GitHub Pages**, relancer le dernier workflow si le
+   premier essai a échoué avant l’activation de Pages. Lancer **Run workflow** sur
+   `feat/first-playable` est aussi possible si GitHub affiche ce bouton.
+3. Si l’environnement `github-pages` limite les branches autorisées, autoriser
+   `feat/first-playable` dans **Settings → Environments → github-pages**.
+
+Adresse attendue après déploiement réussi :
+<https://daviddurighello.github.io/SlimeSurvivor/>.
+Le statut de publication et l’adresse effective sont affichés dans le job
+`deploy`. Si le dépôt est privé et le plan ne permet pas Pages, GitHub proposera
+les options disponibles ; ce workflow ne change pas la visibilité du dépôt.
+
+Le build utilise des chemins de ressources relatifs pour fonctionner sous
+`/SlimeSurvivor/`. Les sauvegardes du serveur de développement ne sont pas
+transférées automatiquement : exporter puis importer dans le site publié.
+`localStorage` est partagé par origine entre les sites GitHub Pages d’un même
+compte ; ne pas y stocker de données sensibles. La clé du jeu est spécifique à
+Whey of the Slime.
+
+`npm run test:pages` vérifie le build de production servi sous `/SlimeSurvivor/`
+avec Chromium, en desktop et portrait mobile, y compris le chargement des assets
+et le démarrage du combat.
