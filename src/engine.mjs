@@ -3,6 +3,23 @@ export const SURVIVAL_SECONDS = 30;
 export const WIDTH = 440,
   HEIGHT = 660;
 const clamp = (v, a, b) => Math.max(a, Math.min(v, b));
+// Orientation follows actual movement, including charge and dash, not target position.
+function trackMotion(entity, oldX, oldY) {
+  const x = entity.x - oldX,
+    y = entity.y - oldY;
+  const distance = Math.hypot(x, y);
+  entity.moving = distance > 0.0001;
+  if (!entity.moving) return;
+  entity.facing =
+    Math.abs(x) > Math.abs(y)
+      ? x > 0
+        ? "right"
+        : "left"
+      : y > 0
+        ? "down"
+        : "up";
+  entity.phase = (entity.phase ?? 0) + distance / 7;
+}
 export class Arena {
   constructor(save, difficulty, emit = () => {}, random = Math.random) {
     this.save = save;
@@ -24,6 +41,10 @@ export class Arena {
       dashTime: 0,
       dx: 0,
       dy: -1,
+      facing: "down",
+      moving: false,
+      phase: 0,
+      attacks: [null, null],
     };
     this.enemies = [];
     this.shots = [];
@@ -161,6 +182,8 @@ export class Arena {
       targetX: 0,
       targetY: 0,
       charge: 0,
+      facing: "down",
+      moving: false,
       dead: false,
     };
     this.enemies.push(e);
@@ -223,6 +246,10 @@ export class Arena {
     dt = clamp(dt, 0, 0.05);
     this.time += dt;
     const p = this.player;
+    const oldX = p.x,
+      oldY = p.y;
+    for (const attack of p.attacks)
+      if (attack) attack.life = Math.max(0, attack.life - dt);
     p.inv = Math.max(0, p.inv - dt);
     p.dash = Math.max(0, p.dash - dt);
     p.dashTime = Math.max(0, p.dashTime - dt);
@@ -238,6 +265,7 @@ export class Arena {
       p.x = clamp(p.x + p.dx * speed * dt, 22, WIDTH - 22);
       p.y = clamp(p.y + p.dy * speed * dt, 28, HEIGHT - 25);
     }
+    trackMotion(p, oldX, oldY);
     this.rage = Math.max(
       0,
       this.rage - dt * (this.time - this.lastKill > 1.6 ? 10 : 1.1),
@@ -269,6 +297,12 @@ export class Arena {
         w.damage *
         (1 + (level - 1) * 0.22 + this.save.skills[0] * 0.15) *
         (1 + (this.rage / 100) * (0.35 + this.save.skills[2] * 0.12));
+      p.attacks[hand] = {
+        angle: Math.atan2(target.y - p.y, target.x - p.x),
+        weapon: this.save.weapons[hand],
+        life: 0.28,
+        duration: 0.28,
+      };
       this.cooldowns[hand] = w.delay / (1 + this.rage / 200);
       if (this.save.weapons[hand] === "dumbbell") {
         const angle = Math.atan2(target.y - p.y, target.x - p.x);
@@ -333,7 +367,9 @@ export class Arena {
     }
     for (const e of this.enemies) {
       if (e.dead) continue;
-      e.phase += dt * 5;
+      const oldX = e.x,
+        oldY = e.y;
+      e.moving = false;
       e.flash = Math.max(0, e.flash - dt);
       for (const k of ["slow", "fragile", "burn"])
         e[k] = Math.max(0, e[k] - dt);
@@ -382,6 +418,7 @@ export class Arena {
         e.x += (dx / dist) * move;
         e.y += (dy / dist) * move;
       }
+      trackMotion(e, oldX, oldY);
       if (dist < e.r + 16) this.hurt(e.boss ? 22 : e.type === 2 ? 16 : 9);
     }
     this.enemies = this.enemies.filter((e) => !e.dead);

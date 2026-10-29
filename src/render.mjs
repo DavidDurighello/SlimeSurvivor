@@ -1,5 +1,27 @@
 import { WIDTH as W, HEIGHT as H } from "./engine.mjs";
 const colors = ["#91dc83", "#73c8ed", "#bd8be9"];
+// Shared pose math keeps each hand attached to its shoulder during attacks.
+export function armPose(hand, facing, phase, moving, attack) {
+  const side = hand ? 1 : -1;
+  const profile = facing === "left" || facing === "right";
+  const shoulder = { x: side * (profile ? 8 : 18), y: -9 };
+  let x = shoulder.x + side * 6,
+    y = 5 + (moving ? Math.sin(phase) * side * 4 : 0);
+  if (attack?.life > 0) {
+    const progress = 1 - attack.life / attack.duration;
+    const strength = Math.sin(progress * Math.PI);
+    const sweep = attack.weapon === "dumbbell" ? (progress - 0.5) * 1.8 : 0;
+    const angle = attack.angle + sweep;
+    const reach = 15 + 23 * strength;
+    x = shoulder.x + Math.cos(angle) * reach;
+    y = shoulder.y + Math.sin(angle) * reach;
+  }
+  return {
+    shoulder,
+    elbow: { x: (shoulder.x + x) / 2 + side * 5, y: (shoulder.y + y) / 2 + 5 },
+    fist: { x, y },
+  };
+}
 export class Renderer {
   constructor(canvas) {
     this.canvas = canvas;
@@ -27,11 +49,15 @@ export class Renderer {
   }
   slime(e, t) {
     const c = this.ctx;
-    const bounce = Math.sin(e.phase || t * 4);
+    const bounce = Math.sin(e.phase ?? t * 4);
+    const facing = e.facing ?? "down";
+    const profile = facing === "left" || facing === "right";
+    const sign = facing === "left" ? -1 : 1;
     const squash = e.warning > 0 ? 0.8 : 1 + bounce * 0.08;
     this.ellipse(e.x, e.y + e.r * 0.7, e.r * 1.06, e.r * 0.3, "#0b111742");
     c.save();
-    c.translate(e.x, e.y);
+    c.translate(e.x, e.y - (e.moving ? Math.abs(bounce) * e.r * 0.13 : 0));
+    if (e.moving && profile) c.transform(1, 0, sign * 0.12, 1, 0, 0);
     c.scale(1 / squash, squash);
     c.beginPath();
     c.moveTo(-e.r, e.r * 0.5);
@@ -51,30 +77,45 @@ export class Renderer {
     c.lineWidth = e.boss ? 4 : 2;
     c.stroke();
     this.ellipse(-e.r * 0.38, -e.r * 0.38, e.r * 0.22, e.r * 0.1, "#ffffff65");
-    for (const side of [-1, 1]) {
-      this.ellipse(
-        side * e.r * 0.32,
-        -e.r * 0.02,
-        e.r * 0.13,
-        e.r * 0.18,
-        "#17282f",
+    if (facing === "up") {
+      for (const side of [-1, 0, 1])
+        this.ellipse(
+          side * e.r * 0.4,
+          e.r * 0.2,
+          e.r * 0.1,
+          e.r * 0.07,
+          "#385b6140",
+        );
+      this.line(
+        -e.r * 0.35,
+        -e.r * 0.6,
+        e.r * 0.35,
+        -e.r * 0.6,
+        "#ffffff50",
+        2,
       );
-      this.ellipse(
-        side * e.r * 0.32 + 1,
-        -e.r * 0.08,
-        e.r * 0.035,
-        e.r * 0.05,
-        "#fff",
+    } else {
+      for (const side of profile ? [sign] : [-1, 1]) {
+        const x = side * e.r * (profile ? 0.56 : 0.32);
+        this.ellipse(x, -e.r * 0.02, e.r * 0.13, e.r * 0.18, "#17282f");
+        this.ellipse(
+          x + (profile ? sign * e.r * 0.04 : 1),
+          -e.r * 0.08,
+          e.r * 0.035,
+          e.r * 0.05,
+          "#fff",
+        );
+      }
+      const mouth = profile ? sign * e.r * 0.55 : 0;
+      this.line(
+        mouth - e.r * 0.12,
+        e.r * 0.3,
+        mouth + e.r * 0.12,
+        e.r * 0.3,
+        "#17282f",
+        e.boss ? 4 : 2,
       );
     }
-    this.line(
-      -e.r * 0.12,
-      e.r * 0.3,
-      e.r * 0.12,
-      e.r * 0.3,
-      "#17282f",
-      e.boss ? 4 : 2,
-    );
     if (e.type === 1) {
       for (const side of [-1, 1])
         this.line(
@@ -132,51 +173,160 @@ export class Renderer {
       c.strokeRect(e.x - e.r - 3, e.y - e.r - 3, e.r * 2 + 6, e.r * 2 + 6);
     }
   }
-  hero(x, y, t, moving = false, inv = false, large = false) {
+  heldWeapon(x, y, weapon, angle = 0) {
     const c = this.ctx;
+    c.save();
+    c.translate(x, y);
+    c.rotate(angle);
+    if (weapon === "plate") {
+      this.ellipse(0, 0, 10, 7, "#43546b");
+      this.ellipse(0, 0, 6, 4, "#a9bad1");
+      this.ellipse(0, 0, 2, 2, "#2b3e50");
+    } else if (weapon === "shaker") {
+      c.fillStyle = "#f6edd6";
+      c.fillRect(-5, -9, 10, 17);
+      c.fillStyle = "#a8d97f";
+      c.fillRect(-4, 0, 8, 6);
+      c.fillStyle = "#eb7852";
+      c.fillRect(-6, -11, 12, 4);
+    } else {
+      this.line(-10, 0, 10, 0, "#a7b7c5", 4);
+      this.line(-10, -6, -10, 6, "#465970", 7);
+      this.line(10, -6, 10, 6, "#465970", 7);
+    }
+    c.restore();
+  }
+  hero(
+    x,
+    y,
+    t,
+    moving = false,
+    inv = false,
+    large = false,
+    facing = "down",
+    phase = 0,
+    attacks = [],
+    weapons = [],
+  ) {
+    const c = this.ctx;
+    const profile = facing === "left" || facing === "right",
+      back = facing === "up",
+      sign = facing === "left" ? -1 : 1;
+    const step = moving ? Math.sin(phase) * 4 : 0;
     c.save();
     c.translate(x, y);
     if (large) c.scale(2.5, 2.5);
     if (inv) c.globalAlpha = 0.5 + Math.sin(t * 50) * 0.3;
-    const step = moving ? Math.sin(t * 16) * 4 : Math.sin(t * 3) * 1.1;
-    this.ellipse(0, 23, 23, 7, "#09141a55");
-    this.line(-8, 12, -10, 24 + step, "#182d3e", 9);
-    this.line(8, 12, 10, 24 - step, "#182d3e", 9);
-    this.line(-14, 25 + step, -6, 25 + step, "#e9ebd8", 6);
-    this.line(6, 25 - step, 14, 25 - step, "#e9ebd8", 6);
-    this.ellipse(0, -1, 18, 20, "#f1ab75");
-    this.ellipse(-19, -8, 12, 11, "#f8bf89");
-    this.ellipse(19, -8, 12, 11, "#f8bf89");
-    this.ellipse(-24, 3 + step * 0.4, 9, 10, "#eaa06f");
-    this.ellipse(24, 3 - step * 0.4, 9, 10, "#eaa06f");
-    this.line(-19, -11, -12, -5, "#d58c62", 2);
-    this.line(19, -11, 12, -5, "#d58c62", 2);
+    this.ellipse(0, 23, profile ? 17 : 23, 7, "#09141a55");
+    c.translate(
+      0,
+      moving ? -Math.abs(Math.sin(phase)) * 1.5 : Math.sin(t * 3) * 0.6,
+    );
+    const legWidth = profile ? 5 : 8;
+    this.line(
+      -legWidth,
+      12,
+      -legWidth + (profile ? step : 0),
+      24 + (!profile ? step : 0),
+      "#182d3e",
+      9,
+    );
+    this.line(
+      legWidth,
+      12,
+      legWidth - (profile ? step : 0),
+      24 - (!profile ? step : 0),
+      "#182d3e",
+      9,
+    );
+    this.line(
+      -legWidth - 4 + (profile ? step : 0),
+      25 + (!profile ? step : 0),
+      -legWidth + 4 + (profile ? step : 0),
+      25 + (!profile ? step : 0),
+      "#e9ebd8",
+      6,
+    );
+    this.line(
+      legWidth - 4 - (profile ? step : 0),
+      25 - (!profile ? step : 0),
+      legWidth + 4 - (profile ? step : 0),
+      25 - (!profile ? step : 0),
+      "#e9ebd8",
+      6,
+    );
+    const arm = (hand) => {
+      const pose = armPose(hand, facing, phase, moving, attacks[hand]);
+      const { shoulder: a, elbow: b, fist: f } = pose;
+      this.line(a.x, a.y, b.x, b.y, "#f8bf89", 18);
+      this.ellipse(a.x, a.y, profile ? 9 : 11, 10, "#f8bf89");
+      this.line(b.x, b.y, f.x, f.y, "#eaa06f", 13);
+      this.ellipse(f.x, f.y, 7, 7, "#f1ab75");
+      this.line(a.x - 3, a.y - 3, b.x - 2, b.y - 4, "#d58c62", 2);
+      if (weapons[hand])
+        this.heldWeapon(
+          f.x,
+          f.y,
+          weapons[hand],
+          attacks[hand]?.life > 0 ? attacks[hand].angle + Math.PI / 2 : 0,
+        );
+    };
+    const far = profile ? (sign > 0 ? 0 : 1) : 0;
+    arm(far);
+    this.ellipse(0, -1, profile ? 12 : 18, 20, "#f1ab75");
     c.fillStyle = "#e86444";
     c.beginPath();
-    c.moveTo(-10, -15);
-    c.lineTo(-7, 9);
-    c.lineTo(7, 9);
-    c.lineTo(10, -15);
-    c.lineTo(5, -9);
-    c.lineTo(-5, -9);
+    if (back) {
+      c.moveTo(-13, -15);
+      c.lineTo(-8, 10);
+      c.lineTo(8, 10);
+      c.lineTo(13, -15);
+      c.lineTo(5, -9);
+      c.lineTo(-5, -9);
+    } else {
+      c.moveTo(profile ? -8 : -10, -15);
+      c.lineTo(-7, 9);
+      c.lineTo(7, 9);
+      c.lineTo(profile ? 8 : 10, -15);
+      c.lineTo(5, -9);
+      c.lineTo(-5, -9);
+    }
     c.fill();
+    if (back) {
+      this.line(-9, -6, 0, -1, "#b95037", 2);
+      this.line(9, -6, 0, -1, "#b95037", 2);
+      this.line(0, -5, 0, 6, "#b95037", 2);
+    }
     c.fillStyle = "#243b4a";
-    c.fillRect(-14, 9, 28, 8);
+    c.fillRect(profile ? -10 : -14, 9, profile ? 20 : 28, 8);
     this.line(0, 10, 0, 17, "#142a36", 2);
-    this.ellipse(0, -24, 10, 12, "#f8bf89");
-    c.fillStyle = "#483527";
-    c.beginPath();
-    c.arc(0, -29, 10, Math.PI, Math.PI * 2);
-    c.lineTo(10, -26);
-    c.lineTo(-10, -27);
-    c.fill();
+    this.ellipse(0, -24, profile ? 9 : 10, 12, "#f8bf89");
+    if (back) {
+      this.ellipse(0, -26, 10, 10, "#483527");
+      this.ellipse(0, -18, 5, 3, "#483527");
+    } else {
+      c.fillStyle = "#483527";
+      c.beginPath();
+      c.arc(0, -29, 10, Math.PI, Math.PI * 2);
+      c.lineTo(10, -26);
+      c.lineTo(-10, -27);
+      c.fill();
+    }
     this.line(-10, -28, 10, -28, "#e86444", 4);
-    this.line(-6, -23, -2, -23, "#172c35", 2);
-    this.line(2, -23, 6, -23, "#172c35", 2);
-    this.line(-4, -17, 4, -17, "#fff4d9", 2);
+    if (profile) {
+      this.line(sign * 3, -23, sign * 6, -23, "#172c35", 2);
+      this.ellipse(sign * 9, -21, 3, 3, "#f8bf89");
+      this.line(sign * 3, -17, sign * 7, -17, "#fff4d9", 2);
+    } else if (!back) {
+      this.line(-6, -23, -2, -23, "#172c35", 2);
+      this.line(2, -23, 6, -23, "#172c35", 2);
+      this.line(-4, -17, 4, -17, "#fff4d9", 2);
+    }
+    arm(1 - far);
     c.restore();
   }
-  draw(game, t, moving) {
+  draw(game, t) {
+    if (game) t = game.time;
     const c = this.ctx;
     c.clearRect(0, 0, W, H);
     c.fillStyle = "#d4d8bb";
@@ -273,7 +423,19 @@ export class Renderer {
       (a, b) => a.y - b.y,
     );
     for (const e of sorted) {
-      if (e.hero) this.hero(e.x, e.y, t, moving, game.player.inv > 0);
+      if (e.hero)
+        this.hero(
+          e.x,
+          e.y,
+          t,
+          e.moving,
+          game.player.inv > 0,
+          false,
+          e.facing,
+          e.phase,
+          e.attacks,
+          game.save.weapons,
+        );
       else this.slime(e, t);
     }
     for (const s of game.shots) {

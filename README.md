@@ -34,6 +34,11 @@ produits localement, sans ressources externes ni télémétrie.
 - Pause : Échap, P ou bouton II. Les statistiques mobiles et le passage en
   arrière-plan mettent aussi le combat en pause.
 
+Le personnage et les slimes disposent de vues de face, de dos et de profil.
+L’orientation suit le déplacement et reste conservée à l’arrêt. Chaque bras
+anime indépendamment son arme vers la cible automatique ; la pause fige aussi
+les animations.
+
 Les attaques sont automatiques. Survivre 30 secondes fait apparaître le boss ;
 les slimes continuent d’arriver. Battre le boss débloque le palier suivant.
 Quitter ou perdre conserve toutes les gelées déjà gagnées. Fermer l’onglet ne
