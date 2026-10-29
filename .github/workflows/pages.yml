@@ -2,8 +2,7 @@ name: Deploy GitHub Pages
 
 on:
   push:
-    branches: [feat/first-playable]
-  workflow_dispatch:
+    branches: [main]
 
 permissions:
   contents: read
@@ -14,6 +13,7 @@ concurrency:
 
 jobs:
   build:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -31,11 +31,18 @@ jobs:
       - run: npm test
       - run: npm run format:check
       - run: npm run build
+      - run: npm run test:browser
+        env:
+          CHROMIUM_PATH: /usr/bin/google-chrome
+      - run: node scripts/test-pages.mjs
+        env:
+          CHROMIUM_PATH: /usr/bin/google-chrome
       - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5.0.0
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
         with:
           path: dist
   deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
     permissions:

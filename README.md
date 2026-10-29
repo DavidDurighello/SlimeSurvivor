@@ -92,7 +92,7 @@ ni Safari/iOS pour le moment.
 ## GitHub Pages
 
 Le workflow `.github/workflows/pages.yml` construit et publie uniquement `dist/`
-à chaque push sur `feat/first-playable`. Aucun secret personnel à ajouter : il
+uniquement à chaque push sur `main`, après succès des tests et du build. Aucun secret personnel à ajouter : il
 utilise le jeton temporaire fourni par GitHub Actions avec des permissions limitées.
 Les dépendances de build et les sources du dépôt ne sont pas incluses dans `dist/`.
 Le site publié est accessible publiquement, même si le dépôt est privé selon le
@@ -101,11 +101,13 @@ plan GitHub ; aucune sauvegarde utilisateur n’est envoyée au site.
 Activation initiale par le propriétaire du dépôt :
 
 1. Dans **Settings → Pages → Build and deployment**, choisir **Source: GitHub Actions**.
-2. Dans **Actions → Deploy GitHub Pages**, relancer le dernier workflow si le
-   premier essai a échoué avant l’activation de Pages. Lancer **Run workflow** sur
-   `feat/first-playable` est aussi possible si GitHub affiche ce bouton.
-3. Si l’environnement `github-pages` limite les branches autorisées, autoriser
-   `feat/first-playable` dans **Settings → Environments → github-pages**.
+2. Dans **Settings → Environments → github-pages → Deployment branches and tags**,
+   choisir **Selected branches and tags** et autoriser uniquement la branche
+   `main` (aucun tag). Ce réglage protège aussi contre un ancien workflow
+   présent sur une branche de développement.
+3. Fusionner une PR vers `main` : le workflow publie le commit résultant. Les
+   branches de développement et les PR ne publient pas. Le lancement manuel
+   du workflow est désactivé.
 
 Adresse attendue après déploiement réussi :
 <https://daviddurighello.github.io/SlimeSurvivor/>.
@@ -123,3 +125,28 @@ Whey of the Slime.
 `npm run test:pages` vérifie le build de production servi sous `/SlimeSurvivor/`
 avec Chromium, en desktop et portrait mobile, y compris le chargement des assets
 et le démarrage du combat.
+
+## Protéger main par pull request
+
+Le fichier `.github/main-ruleset.json` est une configuration prête à importer,
+**pas une protection active tant qu’elle n’est pas enregistrée dans GitHub**.
+Dans **Settings → Rules → Rulesets → New ruleset → Import a ruleset**, importer
+ce fichier puis vérifier qu’il est **Active** et cible uniquement `main`.
+
+Il impose : une pull request, les contrôles `validate` et `secrets` réussis,
+une branche à jour et les discussions résolues. Il bloque suppression et push
+forcé. La liste de contournement est vide. Une approbation humaine n’est pas
+imposée par défaut pour ne pas bloquer un mainteneur seul ; passer le nombre
+requis à 1 si un autre collaborateur doit approuver chaque PR.
+
+Si les règles ne sont pas disponibles pour un dépôt privé avec le plan actuel,
+GitHub indiquera la limitation ; un fichier dans le dépôt ne peut pas la lever.
+
+Au moment de cette préparation, `main` n’existait pas encore sur le distant.
+Pour amorcer le flux sans publier directement le prototype, le propriétaire peut
+créer `main` depuis le commit initial de sécurité
+`8aa5637` (utiliser son SHA complet dans GitHub si nécessaire), puis ouvrir la
+première PR depuis `feat/first-playable` et activer les règles ci-dessus.
+Définir `main` comme branche par défaut. Les commits suivants doivent tous
+passer par PR. Aucun merge ou changement de branche par défaut n’est effectué
+par les fichiers de configuration.
