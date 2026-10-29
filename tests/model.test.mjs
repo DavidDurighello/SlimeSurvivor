@@ -6,6 +6,7 @@ import {
   replaceTalents,
   replaceGear,
   comboKey,
+  nextUpgrade,
 } from "../src/model.mjs";
 import { Arena } from "../src/engine.mjs";
 test("save validation rejects malformed imports and keeps independent hands", () => {
@@ -273,4 +274,50 @@ test("older saves default to full effects and keep the reduced motion preference
   assert.equal(validateSave(legacy).reducedMotion, false);
   legacy.reducedMotion = true;
   assert.equal(validateSave(legacy).reducedMotion, true);
+});
+
+test("next upgrade suggests an exact affordable purchase without touching jelly", () => {
+  const s = freshSave();
+  s.gear[0] = 15;
+  const before = JSON.stringify(s);
+  const goal = nextUpgrade(s);
+  assert.equal(goal.name, "Débloquer Disques");
+  assert.equal(goal.missing, 0);
+  assert.equal(goal.tab, "gear");
+  assert.equal(JSON.stringify(s), before);
+  s.gear[0] = 0;
+  s.body[0] = 5;
+  const body = nextUpgrade(s);
+  assert.equal(body.name, "Muscles · rang 1");
+  assert.equal(body.missing, 3);
+  s.skills = [5, 5, 5];
+  s.levels = { dumbbell: 5, plate: 5, shaker: 5 };
+  assert.equal(nextUpgrade(s), null);
+});
+
+test("boss alternates a warned slam and a charge toward a locked target", () => {
+  const a = new Arena(freshSave(), 1);
+  a.spawn = 100;
+  a.cooldowns = [100, 100];
+  a.player.x = 300;
+  a.player.y = 100;
+  const boss = a.spawnEnemy(true);
+  boss.x = 100;
+  boss.y = 100;
+  boss.attack = 0;
+  a.update(0.05);
+  assert.equal(boss.pattern, "slam");
+  assert.ok(boss.warning > 0);
+  assert.equal(boss.charge, 0);
+  for (let i = 0; i < 20; i++) a.update(0.05);
+  boss.attack = 0;
+  a.update(0.05);
+  assert.equal(boss.pattern, "charge");
+  const targetY = boss.targetY;
+  a.player.y = 400;
+  for (let i = 0; i < 23; i++) a.update(0.05);
+  assert.equal(boss.targetY, targetY);
+  assert.ok(boss.charge > 0);
+  assert.ok(Math.abs(boss.cy) < 0.01);
+  assert.ok(boss.x > 100);
 });

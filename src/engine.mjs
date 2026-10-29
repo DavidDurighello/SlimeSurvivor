@@ -187,6 +187,8 @@ export class Arena {
       targetX: 0,
       targetY: 0,
       charge: 0,
+      pattern: "slam",
+      attackIndex: 0,
       facing: "down",
       moving: false,
       recoilX: 0,
@@ -451,19 +453,20 @@ export class Arena {
       e.attack -= dt;
       if (e.attack <= 0 && (e.boss || e.type === 2)) {
         e.attack = e.boss ? 4 : 7;
-        e.warning = 0.9;
+        if (e.boss) e.pattern = e.attackIndex++ % 2 === 0 ? "slam" : "charge";
+        e.warning = e.boss && e.pattern === "charge" ? 1.1 : 0.9;
         e.targetX = p.x;
         e.targetY = p.y;
       }
       if (e.warning > 0) {
         e.warning -= dt;
         if (e.warning <= 0) {
-          if (e.boss) {
+          if (e.boss && e.pattern !== "charge") {
             this.fx(e.x, e.y, "#ff897e", 145, "ring");
             if (Math.hypot(p.x - e.x, p.y - e.y) < 145) this.hurt(23);
           } else {
             const a = Math.atan2(e.targetY - e.y, e.targetX - e.x);
-            e.charge = 0.48;
+            e.charge = e.boss ? 0.6 : 0.48;
             e.cx = Math.cos(a);
             e.cy = Math.sin(a);
           }
@@ -480,8 +483,9 @@ export class Arena {
         dt;
       if (e.charge > 0) {
         e.charge -= dt;
-        e.x = clamp(e.x + e.cx * 250 * dt, e.r, WIDTH - e.r);
-        e.y = clamp(e.y + e.cy * 250 * dt, e.r, HEIGHT - e.r);
+        const chargeSpeed = e.boss ? 310 : 250;
+        e.x = clamp(e.x + e.cx * chargeSpeed * dt, e.r, WIDTH - e.r);
+        e.y = clamp(e.y + e.cy * chargeSpeed * dt, e.r, HEIGHT - e.r);
       } else {
         e.x += (dx / dist) * move;
         e.y += (dy / dist) * move;

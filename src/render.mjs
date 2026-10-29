@@ -417,13 +417,22 @@ export class Renderer {
         c.fillStyle = "#ef75553a";
         c.lineWidth = 3;
         c.setLineDash([7, 5]);
-        if (e.boss) {
+        if (e.boss && e.pattern !== "charge") {
           c.beginPath();
           c.arc(e.x, e.y, 145, 0, Math.PI * 2);
           c.fill();
           c.stroke();
         } else {
-          this.line(e.x, e.y, e.targetX, e.targetY, "#df665d85", 24);
+          const angle = Math.atan2(e.targetY - e.y, e.targetX - e.x);
+          const length = e.boss ? 186 : 120;
+          this.line(
+            e.x,
+            e.y,
+            e.x + Math.cos(angle) * length,
+            e.y + Math.sin(angle) * length,
+            "#df665d85",
+            (e.r + 16) * 2,
+          );
           c.strokeStyle = "#de5e4b";
           c.strokeRect(e.targetX - 15, e.targetY - 15, 30, 30);
         }
