@@ -189,3 +189,78 @@ test("invalid save import is rejected without changing progress", async ({
     ),
   ).toBe(42);
 });
+
+test("directional hero and slime artwork and independent arm poses are visible", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const result = await page.evaluate(async () => {
+    const { Renderer } = await import("/src/render.mjs");
+    const canvas = document.createElement("canvas"),
+      r = new Renderer(canvas);
+    const c = r.ctx;
+    const hero = (facing, attacks = []) => {
+      c.clearRect(0, 0, 440, 660);
+      r.hero(220, 330, 0, false, false, true, facing, 0, attacks, [
+        "plate",
+        "shaker",
+      ]);
+      return canvas.toDataURL();
+    };
+    const faces = ["down", "up", "left", "right"];
+    const heroes = faces.map((f) => hero(f));
+    const slimes = faces.map((facing) => {
+      c.clearRect(0, 0, 440, 660);
+      r.slime({ x: 220, y: 330, r: 35, type: 0, phase: 0, facing }, 0);
+      return canvas.toDataURL();
+    });
+    const strike = { weapon: "plate", angle: 0, life: 0.14, duration: 0.28 };
+    const idle = hero("down"),
+      left = hero("down", [strike, null]),
+      right = hero("down", [null, { ...strike, weapon: "shaker" }]);
+    // Also save a contact sheet for visual review of silhouettes and attack poses.
+    canvas.width = 1760;
+    canvas.height = 1320;
+    c.scale(2, 2);
+    c.fillStyle = "#d4d8bb";
+    c.fillRect(0, 0, 880, 660);
+    c.font = "18px sans-serif";
+    c.textAlign = "center";
+    faces.forEach((f, i) => {
+      const x = 110 + i * 220;
+      c.fillStyle = "#26372e";
+      c.fillText(f, x, 40);
+      r.hero(x, 150, 0, true, false, true, f, 1, [], ["dumbbell", "shaker"]);
+      r.slime(
+        { x, y: 300, r: 35, type: i % 3, phase: 1, facing: f, moving: true },
+        0,
+      );
+      r.hero(
+        x,
+        490,
+        0,
+        false,
+        false,
+        true,
+        f,
+        0,
+        [strike, { ...strike, angle: Math.PI, weapon: "shaker" }],
+        ["plate", "shaker"],
+      );
+    });
+    return {
+      heroes: new Set(heroes).size,
+      slimes: new Set(slimes).size,
+      arms: new Set([idle, left, right]).size,
+      image: canvas.toDataURL(),
+    };
+  });
+  expect(result.heroes).toBe(4);
+  expect(result.slimes).toBe(4);
+  expect(result.arms).toBe(3);
+  const { writeFile } = await import("node:fs/promises");
+  await writeFile(
+    "/tmp/whey-directions.png",
+    Buffer.from(result.image.split(",")[1], "base64"),
+  );
+});

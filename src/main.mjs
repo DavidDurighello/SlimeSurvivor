@@ -617,12 +617,7 @@ function loop(timestamp) {
       (keys.has("w") || keys.has("z") || keys.has("arrowup") ? 1 : 0),
   };
   if (game) game.update(dt, input);
-  if (tab === "play")
-    renderer.draw(
-      game,
-      timestamp / 1000,
-      Math.hypot(input.x, input.y) > 0.1 && !game?.paused,
-    );
+  if (tab === "play") renderer.draw(game, timestamp / 1000);
   uiClock += dt;
   if (uiClock > 0.1 && game) {
     uiClock = 0;

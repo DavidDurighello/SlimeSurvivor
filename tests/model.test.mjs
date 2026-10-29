@@ -141,3 +141,81 @@ test("movement, boundary clamping and dash cooldown", () => {
   assert.ok(a.player.x <= 418);
   assert.equal(a.dash(), true);
 });
+
+test("facing follows movement, remains at rest and stops at arena walls", () => {
+  const a = new Arena(freshSave(), 1);
+  for (const [x, y, facing] of [
+    [1, 0, "right"],
+    [-1, 0, "left"],
+    [0, -1, "up"],
+    [0, 1, "down"],
+  ]) {
+    a.update(0.05, { x, y });
+    assert.equal(a.player.facing, facing);
+    assert.equal(a.player.moving, true);
+  }
+  const phase = a.player.phase;
+  a.update(0.05);
+  assert.equal(a.player.facing, "down");
+  assert.equal(a.player.moving, false);
+  assert.equal(a.player.phase, phase);
+  a.player.x = 418;
+  a.update(0.05, { x: 1, y: 0 });
+  assert.equal(a.player.moving, false);
+  a.player.x = 200;
+  a.update(0.05, { x: -1, y: 0 });
+  a.dash();
+  a.update(0.05);
+  assert.equal(a.player.facing, "left");
+  assert.equal(a.player.moving, true);
+});
+
+test("slimes turn toward travel and face their charge instead of the player", () => {
+  const a = new Arena(freshSave(), 1);
+  a.spawn = 100;
+  const e = a.spawnEnemy();
+  e.x = a.player.x - 130;
+  e.y = a.player.y;
+  e.attack = 100;
+  a.update(0.05);
+  assert.equal(e.facing, "right");
+  assert.equal(e.moving, true);
+  e.warning = 0.5;
+  a.update(0.05);
+  assert.equal(e.moving, false);
+  assert.equal(e.facing, "right");
+  e.warning = 0;
+  e.charge = 0.4;
+  e.cx = -1;
+  e.cy = 0;
+  a.update(0.05);
+  assert.equal(e.facing, "left");
+});
+
+test("attacks animate the correct hand, aim at target and freeze in pause", () => {
+  const save = freshSave();
+  save.weapons = ["plate", "shaker"];
+  save.levels.plate = save.levels.shaker = 1;
+  const a = new Arena(save, 1);
+  a.spawn = 100;
+  a.cooldowns = [0, 100];
+  const e = a.spawnEnemy();
+  e.x = a.player.x + 130;
+  e.y = a.player.y;
+  e.hp = 10000;
+  e.attack = 100;
+  a.update(0.05);
+  assert.equal(a.player.attacks[0].weapon, "plate");
+  assert.equal(a.player.attacks[1], null);
+  assert.equal(a.player.attacks[0].angle, 0);
+  a.cooldowns = [100, 0];
+  a.update(0.05);
+  assert.equal(a.player.attacks[1].weapon, "shaker");
+  const life = a.player.attacks[0].life;
+  a.paused = true;
+  a.update(0.05);
+  assert.equal(a.player.attacks[0].life, life);
+  a.paused = false;
+  for (let i = 0; i < 7; i++) a.update(0.05);
+  assert.equal(a.player.attacks[0].life, 0);
+});
